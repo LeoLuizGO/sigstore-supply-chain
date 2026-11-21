@@ -1,0 +1,11 @@
+# Namespace da aplicação. As políticas do Kyverno (politicas/) só valem aqui, para não
+# afetar kube-system nem o próprio Kyverno.
+# Os rótulos do Pod Security Admission (nativo do Kubernetes) recusam pods que não
+# sigam o perfil "restricted", reforçando o securityContext do deployment.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loja
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest

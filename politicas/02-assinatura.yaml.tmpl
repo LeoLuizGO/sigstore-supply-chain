@@ -1,0 +1,53 @@
+# Política 02 — assinatura keyless obrigatória, feita pelo workflow do pipeline.
+#
+# Para cada imagem de ${IMAGEM} no namespace ${NAMESPACE}, o Kyverno (via biblioteca do
+# cosign) baixa a assinatura (tag sha256-<digest>.sig), valida o certificado até a raiz do
+# Fulcio (trust root obtido por TUF), confere que o SAN do certificado é
+# ${IDENTIDADE_PIPELINE} e que o emissor OIDC é ${EMISSOR_OIDC}, verifica a assinatura
+# ECDSA sobre o payload (que contém o digest) e a inclusão da entrada no Rekor
+# (${REKOR_URL}), usando o tempo de integração do Rekor para aceitar o certificado já
+# expirado. Obs.: o Kyverno compara subject/issuer com casamento curinga (* e ?); os
+# valores do projeto não têm curingas, então a comparação é exata.
+#
+# mutateDigest: troca a tag pelo digest verificado (o pod roda exatamente o que foi verificado);
+# verifyDigest: exige que a imagem final esteja fixada por digest;
+# required:     a imagem precisa ter passado pela verificação.
+#
+# Esta política sozinha NÃO garante atualidade: uma versão antiga assinada passa (E2.5).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: assinatura-imagem
+  annotations:
+    policies.kyverno.io/title: Assinatura keyless do pipeline
+    policies.kyverno.io/description: >-
+      Imagens de ${IMAGEM} só são admitidas com assinatura keyless (Fulcio + Rekor)
+      cujo certificado identifica ${IDENTIDADE_PIPELINE}.
+spec:
+  background: false
+  failurePolicy: Fail
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: assinatura-do-pipeline
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: ["${NAMESPACE}"]
+      verifyImages:
+        - imageReferences:
+            - "${IMAGEM}*"
+          type: Cosign
+          failureAction: Enforce
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+          useCache: true
+          attestors:
+            - count: 1
+              entries:
+                - keyless:
+                    subject: "${IDENTIDADE_PIPELINE}"
+                    issuer: "${EMISSOR_OIDC}"
+                    rekor:
+                      url: "${REKOR_URL}"

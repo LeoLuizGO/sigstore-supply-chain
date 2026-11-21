@@ -1,0 +1,43 @@
+# Política 01 — só imagens do repositório do projeto no namespace ${NAMESPACE}.
+#
+# Por que existe: a regra de assinatura (02) só verifica as imagens que casam com
+# imageReferences. Sem esta política, o atacante faria o deploy de uma imagem de outro
+# registry/repositório, que a 02 simplesmente ignora.
+#
+# O padrão exige "${IMAGEM}:<tag>" ou "${IMAGEM}@<digest>" (com ':' ou '@' logo depois do
+# nome), para que um repositório vizinho como "${IMAGEM}-falso" não passe.
+# A regra é escrita para Pod; o Kyverno gera automaticamente (autogen) as versões para
+# Deployment, ReplicaSet, StatefulSet, DaemonSet, Job e CronJob.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: registry-permitido
+  annotations:
+    policies.kyverno.io/title: Registry permitido
+    policies.kyverno.io/description: >-
+      No namespace ${NAMESPACE}, todo container (inclusive init e efêmero) precisa usar
+      uma imagem de ${IMAGEM}.
+spec:
+  background: false
+  failurePolicy: Fail
+  webhookTimeoutSeconds: 15
+  rules:
+    - name: so-imagens-do-projeto
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: ["${NAMESPACE}"]
+      validate:
+        failureAction: Enforce
+        message: >-
+          imagem fora do registry permitido: no namespace ${NAMESPACE} só são aceitas
+          imagens de ${IMAGEM} (por tag ou digest).
+        pattern:
+          spec:
+            containers:
+              - image: "${IMAGEM}:* | ${IMAGEM}@*"
+            =(initContainers):
+              - image: "${IMAGEM}:* | ${IMAGEM}@*"
+            =(ephemeralContainers):
+              - image: "${IMAGEM}:* | ${IMAGEM}@*"

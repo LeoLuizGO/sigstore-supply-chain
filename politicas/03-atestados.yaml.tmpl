@@ -1,0 +1,109 @@
+# Política 03 — atestados obrigatórios (SBOM, proveniência SLSA e varredura recente).
+#
+# (a) SBOM CycloneDX (https://cyclonedx.org/bom) atestado pela identidade do pipeline.
+# (b) Proveniência SLSA v0.2 assinada pelo workflow reutilizável do slsa-github-generator
+#     (${IDENTIDADE_PROVENIENCIA}), com o predicado amarrado ao repositório/ref e ao
+#     workflow que disparou o build. Campos conferidos no código do generator v2.1.0
+#     (github/workflow.go e slsa/buildtype.go) e em proveniências reais desse generator:
+#       invocation.configSource.uri        = "git+https://github.com/<owner>/<repo>@<github.ref>"
+#       invocation.configSource.entryPoint = caminho do workflow chamador
+#       buildType = https://github.com/slsa-framework/slsa-github-generator/container@v1
+# (c) Atestado de varredura (https://cosign.sigstore.dev/attestation/vuln/v1) assinado
+#     pelo pipeline OU pelo reescaneamento (count: 1 = basta uma das duas entradas), com
+#     metadata.scanFinishedOn há no máximo ${JANELA_VARREDURA} (duração no formato Go:
+#     h, m, s; "7d" NÃO é aceito).
+#
+# Comportamento do Kyverno 1.19 que importa aqui (ver docs/cluster.md):
+#  - Para cada entrada (identidade), TODOS os atestados do tipo pedido precisam satisfazer
+#    as condições; e se o .att tiver um atestado do mesmo tipo assinado por OUTRA
+#    identidade, a entrada falha. Por isso o reescaneamento precisa usar
+#    `cosign attest --replace` (remove do .att os atestados anteriores do mesmo tipo).
+#  - Entradas com `conditions` desligam o cache de verificação: esta política é verificada
+#    por completo em toda admissão.
+#
+# O patch tag -> digest fica a cargo da política 02 (aqui mutateDigest: false).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: atestados-imagem
+  annotations:
+    policies.kyverno.io/title: Atestados obrigatórios
+    policies.kyverno.io/description: >-
+      Imagens de ${IMAGEM} precisam de SBOM CycloneDX e proveniência SLSA válidos e de
+      um atestado de varredura de vulnerabilidades com menos de ${JANELA_VARREDURA}.
+spec:
+  background: false
+  failurePolicy: Fail
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: atestados-do-pipeline
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: ["${NAMESPACE}"]
+      verifyImages:
+        - imageReferences:
+            - "${IMAGEM}*"
+          type: Cosign
+          failureAction: Enforce
+          mutateDigest: false
+          verifyDigest: true
+          required: true
+          useCache: true
+          attestations:
+            # (a) SBOM
+            - type: https://cyclonedx.org/bom
+              attestors:
+                - count: 1
+                  entries:
+                    - keyless:
+                        subject: "${IDENTIDADE_PIPELINE}"
+                        issuer: "${EMISSOR_OIDC}"
+                        rekor:
+                          url: "${REKOR_URL}"
+            # (b) proveniência SLSA v0.2
+            - type: https://slsa.dev/provenance/v0.2
+              attestors:
+                - count: 1
+                  entries:
+                    - keyless:
+                        subject: "${IDENTIDADE_PROVENIENCIA}"
+                        issuer: "${EMISSOR_OIDC}"
+                        rekor:
+                          url: "${REKOR_URL}"
+              conditions:
+                - all:
+                    - key: "{{ invocation.configSource.uri }}"
+                      operator: Equals
+                      value: "${URI_FONTE_ESPERADA}"
+                      message: "proveniência de outro repositório/ref: {{ invocation.configSource.uri }}"
+                    - key: "{{ invocation.configSource.entryPoint }}"
+                      operator: Equals
+                      value: "${ENTRYPOINT_ESPERADO}"
+                      message: "proveniência de outro workflow: {{ invocation.configSource.entryPoint }}"
+                    - key: "{{ buildType }}"
+                      operator: Equals
+                      value: "${BUILD_TYPE_SLSA}"
+                      message: "buildType inesperado: {{ buildType }}"
+            # (c) varredura de vulnerabilidades recente
+            - type: https://cosign.sigstore.dev/attestation/vuln/v1
+              attestors:
+                - count: 1
+                  entries:
+                    - keyless:
+                        subject: "${IDENTIDADE_PIPELINE}"
+                        issuer: "${EMISSOR_OIDC}"
+                        rekor:
+                          url: "${REKOR_URL}"
+                    - keyless:
+                        subject: "${IDENTIDADE_REESCANEAR}"
+                        issuer: "${EMISSOR_OIDC}"
+                        rekor:
+                          url: "${REKOR_URL}"
+              conditions:
+                - all:
+                    - key: "{{ time_since('', '{{ metadata.scanFinishedOn }}', '') }}"
+                      operator: LessThanOrEquals
+                      value: "${JANELA_VARREDURA}"
+                      message: "varredura vencida: scanFinishedOn={{ metadata.scanFinishedOn }}, janela=${JANELA_VARREDURA}"

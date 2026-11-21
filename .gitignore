@@ -1,0 +1,10 @@
+bin/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.key
+cosign.key
+cosign.pub
+.env
+tmp/

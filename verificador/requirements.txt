@@ -1,0 +1,22 @@
+# Dependências do verificador (versões conferidas no PyPI em 21/11/2026; Python 3.11).
+# Instalação:  python -m venv verificador/.venv && verificador/.venv/Scripts/python -m pip install -r verificador/requirements.txt
+# (no Linux: verificador/.venv/bin/python)
+cryptography==50.0.2
+requests==2.34.2
+pytest==9.2.0
+
+# Dependências transitivas, fixadas para reprodutibilidade
+cffi==2.1.1
+pycparser==3.12
+urllib3==2.8.0
+idna==3.20
+certifi==2026.11.20
+charset-normalizer==3.5.2
+iniconfig==2.3.1
+packaging==26.3
+pluggy==1.7.0
+Pygments==2.21.0
+colorama==0.4.6
+
+# Só para o cross-check do E3 (não é dependência do verificador):
+#   verificador/.venv/Scripts/python -m pip install sigstore==4.5.1

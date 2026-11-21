@@ -1,0 +1,69 @@
+caso,origem,nosso_verificador,cosign,sigstore_python,motivo
+legitima,sintetico,valida,n/a,n/a,
+arvore de 1 entrada,sintetico,valida,n/a,n/a,
+ultima entrada de arvore com 13 folhas,sintetico,valida,n/a,n/a,
+duas assinaturas: outra identidade + legitima,sintetico,valida,n/a,n/a,
+sem assinatura (E2.1),sintetico,rejeitada,n/a,n/a,nenhuma assinatura encontrada
+"payload de outra imagem (troca de assinatura, E2.4)",sintetico,rejeitada,n/a,n/a,assinatura é de outra imagem
+evidencia de outra imagem para o digest esperado,sintetico,rejeitada,n/a,n/a,assinatura é de outra imagem
+"assinatura trocada (mesma chave, outro payload)",sintetico,rejeitada,n/a,n/a,assinatura inválida
+1 bit alterado na assinatura,sintetico,rejeitada,n/a,n/a,assinatura inválida
+1 byte alterado no payload,sintetico,rejeitada,n/a,n/a,assinatura inválida
+"identidade errada (outro workflow, E2.3a)",sintetico,rejeitada,n/a,n/a,identidade errada
+emissor errado,sintetico,rejeitada,n/a,n/a,emissor errado
+AC desconhecida,sintetico,rejeitada,n/a,n/a,AC desconhecida
+certificado sem EKU codeSigning,sintetico,rejeitada,n/a,n/a,certificado sem EKU codeSigning
+chave local sem certificado (E2.3b),sintetico,rejeitada,n/a,n/a,"assinatura sem certificado Fulcio (chave própria, não keyless)"
+certificado expirado no integratedTime,sintetico,rejeitada,n/a,n/a,assinatura fora da validade do certificado
+integratedTime antes do notBefore,sintetico,rejeitada,n/a,n/a,assinatura fora da validade do certificado
+hash da prova alterado,sintetico,rejeitada,n/a,n/a,prova de inclusão inválida
+indice errado na prova,sintetico,rejeitada,n/a,n/a,prova de inclusão inválida
+prova truncada,sintetico,rejeitada,n/a,n/a,prova de inclusão inválida
+checkpoint com assinatura invalida,sintetico,rejeitada,n/a,n/a,checkpoint inválido
+checkpoint assinado por outra chave,sintetico,rejeitada,n/a,n/a,checkpoint inválido
+raiz falsa na prova e no checkpoint (sem a chave do log),sintetico,rejeitada,n/a,n/a,checkpoint inválido
+raiz do checkpoint diferente (assinado pelo log),sintetico,rejeitada,n/a,n/a,checkpoint não confere com a prova
+body do Rekor de outro artefato (prova e SET validos),sintetico,rejeitada,n/a,n/a,entrada do Rekor não confere
+body do Rekor alterado,sintetico,rejeitada,n/a,n/a,entrada do Rekor não confere
+entrada do Rekor ausente,sintetico,rejeitada,n/a,n/a,entrada do Rekor ausente
+SET do Rekor invalido,sintetico,rejeitada,n/a,n/a,SET inválido
+SET da anotacao invalido,sintetico,rejeitada,n/a,n/a,SET inválido
+bundle da anotacao com integratedTime alterado,sintetico,rejeitada,n/a,n/a,bundle do registry não confere com o Rekor
+chave do log fora do trusted_root,sintetico,rejeitada,n/a,n/a,log de transparência desconhecido
+fluxcd-source-controller-v1.7.0: legitima,real,valida,valida,valida,
+fluxcd-source-controller-v1.7.0: identidade esperada errada,real,rejeitada,rejeitada,rejeitada,identidade errada
+fluxcd-source-controller-v1.7.0: emissor esperado errado,real,rejeitada,rejeitada,rejeitada,emissor errado
+fluxcd-source-controller-v1.7.0: digest esperado de outra imagem,real,rejeitada,n/a,n/a,assinatura é de outra imagem
+fluxcd-source-controller-v1.7.0: 1 byte alterado no payload,real,rejeitada,rejeitada,rejeitada,assinatura inválida
+fluxcd-source-controller-v1.7.0: 1 bit alterado na assinatura,real,rejeitada,rejeitada,rejeitada,assinatura inválida
+fluxcd-source-controller-v1.7.0: 1 hash da prova alterado,real,rejeitada,rejeitada,rejeitada,prova de inclusão inválida
+fluxcd-source-controller-v1.7.0: indice da prova errado,real,rejeitada,rejeitada,rejeitada,prova de inclusão inválida
+fluxcd-source-controller-v1.7.0: raiz falsa na prova e no checkpoint,real,rejeitada,rejeitada,rejeitada,checkpoint inválido
+fluxcd-source-controller-v1.7.0: assinatura do checkpoint alterada,real,rejeitada,rejeitada,rejeitada,checkpoint inválido
+fluxcd-source-controller-v1.7.0: SET alterado,real,rejeitada,rejeitada,rejeitada,SET inválido
+fluxcd-source-controller-v1.7.0: sem certificado (como chave local),real,rejeitada,n/a,n/a,"assinatura sem certificado Fulcio (chave própria, não keyless)"
+external-secrets-v0.20.0: legitima,real,valida,valida,valida,
+external-secrets-v0.20.0: identidade esperada errada,real,rejeitada,rejeitada,rejeitada,identidade errada
+external-secrets-v0.20.0: emissor esperado errado,real,rejeitada,rejeitada,rejeitada,emissor errado
+external-secrets-v0.20.0: digest esperado de outra imagem,real,rejeitada,n/a,n/a,assinatura é de outra imagem
+external-secrets-v0.20.0: 1 byte alterado no payload,real,rejeitada,rejeitada,rejeitada,assinatura inválida
+external-secrets-v0.20.0: 1 bit alterado na assinatura,real,rejeitada,rejeitada,rejeitada,assinatura inválida
+external-secrets-v0.20.0: 1 hash da prova alterado,real,rejeitada,rejeitada,rejeitada,prova de inclusão inválida
+external-secrets-v0.20.0: indice da prova errado,real,rejeitada,rejeitada,rejeitada,prova de inclusão inválida
+external-secrets-v0.20.0: raiz falsa na prova e no checkpoint,real,rejeitada,rejeitada,rejeitada,checkpoint inválido
+external-secrets-v0.20.0: assinatura do checkpoint alterada,real,rejeitada,rejeitada,rejeitada,checkpoint inválido
+external-secrets-v0.20.0: SET alterado,real,rejeitada,rejeitada,rejeitada,SET inválido
+external-secrets-v0.20.0: sem certificado (como chave local),real,rejeitada,n/a,n/a,"assinatura sem certificado Fulcio (chave própria, não keyless)"
+external-secrets-v0.20.0: so a 1a de varias assinaturas adulterada,real,valida,n/a,n/a,
+podinfo-6.9.0: legitima,real,valida,valida,valida,
+podinfo-6.9.0: identidade esperada errada,real,rejeitada,rejeitada,rejeitada,identidade errada
+podinfo-6.9.0: emissor esperado errado,real,rejeitada,rejeitada,rejeitada,emissor errado
+podinfo-6.9.0: digest esperado de outra imagem,real,rejeitada,n/a,n/a,assinatura é de outra imagem
+podinfo-6.9.0: 1 byte alterado no payload,real,rejeitada,rejeitada,rejeitada,assinatura inválida
+podinfo-6.9.0: 1 bit alterado na assinatura,real,rejeitada,rejeitada,rejeitada,assinatura inválida
+podinfo-6.9.0: 1 hash da prova alterado,real,rejeitada,rejeitada,rejeitada,prova de inclusão inválida
+podinfo-6.9.0: indice da prova errado,real,rejeitada,rejeitada,rejeitada,prova de inclusão inválida
+podinfo-6.9.0: raiz falsa na prova e no checkpoint,real,rejeitada,rejeitada,rejeitada,checkpoint inválido
+podinfo-6.9.0: assinatura do checkpoint alterada,real,rejeitada,rejeitada,rejeitada,checkpoint inválido
+podinfo-6.9.0: SET alterado,real,rejeitada,rejeitada,rejeitada,SET inválido
+podinfo-6.9.0: sem certificado (como chave local),real,rejeitada,n/a,n/a,"assinatura sem certificado Fulcio (chave própria, não keyless)"

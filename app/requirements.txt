@@ -1,0 +1,4 @@
+# Dependências Python da loja (instaladas com pip --require-hashes --no-deps).
+# A aplicação só usa a biblioteca padrão, então a lista fica vazia.
+# O cenário E2.6 (pipeline.yml com incluir_dependencia_vulneravel=true) acrescenta
+# aqui, só no runner, uma dependência com CVE crítica para mostrar o Trivy barrando o build.

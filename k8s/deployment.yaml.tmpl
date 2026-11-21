@@ -1,0 +1,71 @@
+# Deployment da aplicação de exemplo. Renderizado por scripts/cluster/deploy.sh, que
+# substitui ${IMAGEM_REF} (ex.: ghcr.io/leoluizgo/sigstore-supply-chain@sha256:...),
+# ${NOME_DEPLOY} ("loja"; os testes com --dry-run=server usam outro nome) e ${NAMESPACE}.
+#
+# Se a referência vier por tag, a política 02 do Kyverno (mutateDigest) reescreve a imagem
+# para tag@digest no momento da admissão: o que roda é exatamente o digest verificado.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${NOME_DEPLOY}
+  namespace: ${NAMESPACE}
+  labels:
+    app: loja
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loja
+  template:
+    metadata:
+      labels:
+        app: loja
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: loja
+          image: "${IMAGEM_REF}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /saude
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /saude
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi

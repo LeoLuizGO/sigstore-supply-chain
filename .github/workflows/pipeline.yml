@@ -1,0 +1,508 @@
+# E1 — Pipeline completo (Seção 3.2 do relatório parcial).
+#
+# Ordem: Semgrep -> build/push (tag sha-<7>) -> Trivy bloqueante no digest -> SBOM (Syft)
+#        e relatório cosign-vuln (Trivy) -> cosign sign + attest (keyless) -> proveniência SLSA
+#        (slsa-github-generator) -> move :main para o digest -> verificação independente.
+# Uma falha em qualquer etapa interrompe o restante (needs encadeados).
+#
+# Versões fixadas: ver docs/pipeline.md. Actions de terceiros por SHA completo do commit,
+# exceto o slsa-github-generator, que só funciona referenciado por tag @vX.Y.Z (exceção documentada).
+name: pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      incluir_dependencia_vulneravel:
+        description: "E2.6: adiciona Django 3.2.12 (CVE-2022-28346, CRÍTICA) antes do build; o Trivy deve barrar"
+        type: boolean
+        default: false
+
+# Nada por padrão; cada job pede só o que usa.
+permissions: {}
+
+# Uma execução por vez: evita que duas execuções movam :main fora de ordem.
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    # bash com -e -o pipefail (o padrão sem "shell:" não usa pipefail)
+    shell: bash
+
+env:
+  COSIGN_VERSAO: v2.6.5
+  EMISSOR_OIDC: https://token.actions.githubusercontent.com
+  # Imagem do Semgrep 1.186.0 (Docker Hub, índice multi-arquitetura) fixada por digest
+  SEMGREP_IMAGEM: semgrep/semgrep:1.186.0@sha256:6e1b04340e60e910fbb4ddbf3c857ab0918f064417ad5ac530014ccb3cf8c8f1
+
+jobs:
+  semgrep:
+    name: semgrep
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Etapa - Semgrep (SAST)
+        run: |
+          # Regras públicas do registry do Semgrep para Python e Dockerfile.
+          # Bloqueia só achados de severidade ERROR; WARNING/INFO ficam no relatório.
+          # safe.directory: o container roda com outro UID e o git recusaria o repositório.
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/src:ro" -w /src \
+            -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0='*' \
+            "${SEMGREP_IMAGEM}" \
+            semgrep scan --config p/python --config p/dockerfile --metrics off --json \
+            > "${RUNNER_TEMP}/semgrep.json"
+          total=$(jq '.results | length' "${RUNNER_TEMP}/semgrep.json")
+          erros=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' "${RUNNER_TEMP}/semgrep.json")
+          echo "Semgrep: ${total} achado(s), ${erros} com severidade ERROR"
+          jq -r '.results[] | "\(.extra.severity)\t\(.check_id)\t\(.path):\(.start.line)"' "${RUNNER_TEMP}/semgrep.json"
+          {
+            echo "### Semgrep"
+            echo "Achados: ${total} (ERROR: ${erros})"
+          } >> "$GITHUB_STEP_SUMMARY"
+          cp "${RUNNER_TEMP}/semgrep.json" e1-semgrep.json
+          if [ "$erros" -gt 0 ]; then
+            echo "::error::Semgrep encontrou ${erros} achado(s) de severidade ERROR"
+            exit 1
+          fi
+
+      - name: Guardar relatório do Semgrep
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: semgrep
+          path: e1-semgrep.json
+          if-no-files-found: ignore
+
+  build:
+    name: build-e-varredura
+    needs: semgrep
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write # push da tag sha-<7> no GHCR
+    outputs:
+      imagem: ${{ steps.nomes.outputs.imagem }}
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Instalar cosign (verificado pelo cosign-installer)
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        with:
+          cosign-release: ${{ env.COSIGN_VERSAO }}
+
+      - name: Instalar Trivy, Syft e crane (versões fixas, hash e assinatura conferidos)
+        run: bash scripts/ci/instalar-ferramentas-ci.sh trivy syft crane
+
+      - name: Nomes
+        id: nomes
+        env:
+          VULNERAVEL: ${{ inputs.incluir_dependencia_vulneravel || false }}
+        run: |
+          imagem="ghcr.io/${GITHUB_REPOSITORY,,}"
+          tag="sha-${GITHUB_SHA::7}"
+          # No E2.6 a imagem vulnerável ganha um sufixo para não sobrescrever a tag
+          # sha-<7> da imagem legítima do mesmo commit.
+          if [ "$VULNERAVEL" = "true" ]; then tag="${tag}-vulneravel"; fi
+          echo "imagem=${imagem}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "Imagem: ${imagem}:${tag}"
+
+      - name: "E2.6 - incluir dependência vulnerável (Django 3.2.12)"
+        if: ${{ inputs.incluir_dependencia_vulneravel }}
+        run: |
+          # Django 3.2.12: CVE-2022-28346 (GHSA-2gwj-7jmv-h26r, CRÍTICA 9.8, corrigida em 3.2.13).
+          # Hash do wheel conferido no PyPI; o pip instala com --require-hashes.
+          echo "Django==3.2.12 --hash=sha256:9b06c289f9ba3a8abea16c9c9505f25107809fb933676f6c891ded270039d965" >> app/requirements.txt
+          echo "::warning::E2.6 ativo: Django 3.2.12 adicionado ao requirements.txt (o Trivy deve interromper o pipeline)"
+          cat app/requirements.txt
+
+      - name: Login no GHCR
+        env:
+          TOKEN: ${{ github.token }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Etapa - Build e push (tag sha-<7>)
+        id: push
+        env:
+          IMAGEM: ${{ steps.nomes.outputs.imagem }}
+          TAG: ${{ steps.nomes.outputs.tag }}
+        run: |
+          # Sem atestados do BuildKit: a imagem publicada é um manifesto simples, e o que
+          # se assina é exatamente o digest desse manifesto.
+          docker buildx build \
+            --platform linux/amd64 --pull --provenance=false --sbom=false \
+            --build-arg "FONTE=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            --build-arg "VERSAO=${GITHUB_SHA}" \
+            -t "${IMAGEM}:${TAG}" --load .
+          docker push "${IMAGEM}:${TAG}" | tee "${RUNNER_TEMP}/push.log"
+          # Digest do manifesto: resolvido no registry (fonte de verdade) e conferido com o push.
+          digest=$(crane digest "${IMAGEM}:${TAG}")
+          digest_push=$(grep -oE 'digest: sha256:[0-9a-f]{64}' "${RUNNER_TEMP}/push.log" | tail -n1 | cut -d' ' -f2 || true)
+          if [ -n "$digest_push" ] && [ "$digest_push" != "$digest" ]; then
+            echo "::error::digest do push (${digest_push}) difere do registry (${digest})"
+            exit 1
+          fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::digest inválido: $digest"; exit 1; }
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "${IMAGEM}@${digest}" > e1-imagem.txt
+          echo "${digest}" > e1-digest.txt
+          echo "Publicado ${IMAGEM}:${TAG} -> ${digest}"
+
+      - name: Etapa - Trivy bloqueante (CRITICAL com correção)
+        id: trivy
+        env:
+          REF: ${{ steps.nomes.outputs.imagem }}@${{ steps.push.outputs.digest }}
+        run: |
+          status=0
+          trivy image --image-src remote --scanners vuln \
+            --severity CRITICAL --ignore-unfixed --exit-code 1 \
+            --format json --output e1-trivy-bloqueante.json "$REF" || status=$?
+          if [ -s e1-trivy-bloqueante.json ]; then
+            jq -r '.Results[]? | .Target as $t | .Vulnerabilities[]? |
+                   "\(.Severity)\t\(.VulnerabilityID)\t\(.PkgName) \(.InstalledVersion) -> \(.FixedVersion)\t\($t)"' \
+              e1-trivy-bloqueante.json
+          fi
+          if [ "$status" -ne 0 ]; then
+            n=$(jq '[.Results[]?.Vulnerabilities[]?] | length' e1-trivy-bloqueante.json 2>/dev/null || echo 0)
+            {
+              echo "## Pipeline interrompido pelo Trivy (antes da assinatura)"
+              echo
+              echo "Imagem: \`${REF}\` (publicada só com a tag sha-<7>, **não assinada** e **não promovida** para :main)"
+              echo
+              echo "CVEs CRITICAL com correção disponível: ${n}"
+              echo
+              echo "| CVE | Pacote | Instalada | Corrigida em |"
+              echo "|---|---|---|---|"
+              jq -r '.Results[]?.Vulnerabilities[]? | "| \(.VulnerabilityID) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) |"' \
+                e1-trivy-bloqueante.json 2>/dev/null || true
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Trivy encontrou CVE crítica com correção (ou falhou); a imagem não será assinada"
+            exit "$status"
+          fi
+          echo "Trivy: nenhuma CVE CRITICAL com correção disponível"
+
+      - name: Etapa - SBOM CycloneDX (Syft)
+        env:
+          REF: ${{ steps.nomes.outputs.imagem }}@${{ steps.push.outputs.digest }}
+          # O Syft também lê ~/.docker/config.json; as variáveis deixam a credencial explícita.
+          SYFT_REGISTRY_AUTH_AUTHORITY: ghcr.io
+          SYFT_REGISTRY_AUTH_USERNAME: ${{ github.actor }}
+          SYFT_REGISTRY_AUTH_PASSWORD: ${{ github.token }}
+        run: |
+          syft scan "registry:${REF}" -o "cyclonedx-json=e1-sbom.cdx.json"
+          jq '{formato: .bomFormat, versao: .specVersion, componentes: (.components | length)}' e1-sbom.cdx.json
+
+      - name: Etapa - Relatório de vulnerabilidades cosign-vuln (Trivy)
+        env:
+          REF: ${{ steps.nomes.outputs.imagem }}@${{ steps.push.outputs.digest }}
+        run: |
+          # Relatório completo (todas as severidades) no formato do predicado
+          # https://cosign.sigstore.dev/attestation/vuln/v1; metadata.scanFinishedOn em RFC 3339.
+          trivy image --image-src remote --scanners vuln --skip-db-update \
+            --format cosign-vuln --output e1-vuln.json "$REF"
+          jq '{scanner: .scanner.uri, scanFinishedOn: .metadata.scanFinishedOn,
+               vulnerabilidades: ([.scanner.result.Results[]?.Vulnerabilities[]?] | length)}' e1-vuln.json
+
+      - name: Guardar artefatos da imagem
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: artefatos-imagem
+          path: |
+            e1-imagem.txt
+            e1-digest.txt
+            e1-trivy-bloqueante.json
+            e1-sbom.cdx.json
+            e1-vuln.json
+          if-no-files-found: ignore
+
+  assinar:
+    name: assinar-e-atestar
+    needs: build
+    # Só a main assina: a identidade aceita pelo cluster é ...pipeline.yml@refs/heads/main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      id-token: write # token OIDC para o Fulcio (assinatura keyless)
+      packages: write # grava sha256-<hex>.sig e .att no GHCR
+    env:
+      REF: ${{ needs.build.outputs.imagem }}@${{ needs.build.outputs.digest }}
+    steps:
+      - name: Instalar cosign (verificado pelo cosign-installer)
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        with:
+          cosign-release: ${{ env.COSIGN_VERSAO }}
+
+      - name: Baixar SBOM e relatório de vulnerabilidades
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: artefatos-imagem
+          path: artefatos
+
+      - name: Conferir digest
+        env:
+          DIGEST: ${{ needs.build.outputs.digest }}
+        run: |
+          [ "$(cat artefatos/e1-digest.txt)" = "$DIGEST" ] || { echo "::error::digest do artefato difere da saída do job build"; exit 1; }
+          cosign version
+
+      - name: Login no GHCR
+        env:
+          TOKEN: ${{ github.token }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Etapa - Assinatura keyless (cosign sign)
+        run: |
+          # Chave efêmera + certificado Fulcio (identidade do workflow) + entrada hashedrekord no Rekor.
+          # Cosign 2.x grava a assinatura no formato legado: tag sha256-<hex>.sig.
+          cosign sign --yes "$REF" 2>&1 | tee e1-cosign-sign.txt
+
+      - name: Etapa - Atestado SBOM (cosign attest --type cyclonedx)
+        run: |
+          cosign attest --yes --type cyclonedx --predicate artefatos/e1-sbom.cdx.json "$REF" 2>&1 \
+            | tee e1-cosign-attest-cyclonedx.txt
+
+      - name: Etapa - Atestado de varredura (cosign attest --type vuln)
+        run: |
+          cosign attest --yes --type vuln --predicate artefatos/e1-vuln.json "$REF" 2>&1 \
+            | tee e1-cosign-attest-vuln.txt
+
+      - name: Guardar saídas da assinatura
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: assinatura
+          path: e1-cosign-*.txt
+          if-no-files-found: ignore
+
+  proveniencia:
+    needs: [build, assinar]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      actions: read # detectar o ambiente do GitHub Actions
+      id-token: write # token OIDC para assinar a proveniência
+      packages: write # gravar o atestado no GHCR
+    # Exceção à regra de fixar por SHA: o gerador SLSA exige referência por tag @vX.Y.Z
+    # (falha se referenciado por hash). A tag v2.1.0 aponta para o commit
+    # f7dd8c54c2067bafc12ca7a55595d5ee9b75204a (conferido em 21/11/2026).
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      image: ${{ needs.build.outputs.imagem }}
+      digest: ${{ needs.build.outputs.digest }}
+      registry-username: ${{ github.actor }}
+    secrets:
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+  promover:
+    name: promover-main
+    needs: [build, assinar, proveniencia]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write # mover a tag :main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Instalar cosign (verificado pelo cosign-installer)
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        with:
+          cosign-release: ${{ env.COSIGN_VERSAO }}
+
+      - name: Instalar crane
+        run: bash scripts/ci/instalar-ferramentas-ci.sh crane
+
+      - name: Login no GHCR
+        env:
+          TOKEN: ${{ github.token }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Etapa - Mover :main para o digest assinado
+        env:
+          IMAGEM: ${{ needs.build.outputs.imagem }}
+          DIGEST: ${{ needs.build.outputs.digest }}
+        run: |
+          # crane tag reaproveita o mesmo manifesto (o digest não muda).
+          crane tag "${IMAGEM}@${DIGEST}" main
+          atual=$(crane digest "${IMAGEM}:main")
+          [ "$atual" = "$DIGEST" ] || { echo "::error::${IMAGEM}:main aponta para ${atual}, esperado ${DIGEST}"; exit 1; }
+          echo "${IMAGEM}:main -> ${DIGEST}"
+
+  verificacao-independente:
+    needs: [build, promover]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read # pull do GHCR enquanto o pacote ainda for privado
+    env:
+      IMAGEM: ${{ needs.build.outputs.imagem }}
+      DIGEST: ${{ needs.build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Instalar cosign (verificado pelo cosign-installer)
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        with:
+          cosign-release: ${{ env.COSIGN_VERSAO }}
+
+      - name: Instalar crane
+        run: bash scripts/ci/instalar-ferramentas-ci.sh crane
+
+      - name: Python 3.12 para o verificador do grupo
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências do verificador (versões fixas em verificador/requirements.txt)
+        run: |
+          python -m venv "${RUNNER_TEMP}/venv"
+          "${RUNNER_TEMP}/venv/bin/python" -m pip install --disable-pip-version-check -r verificador/requirements.txt
+          "${RUNNER_TEMP}/venv/bin/python" -c "import cryptography; print('cryptography', cryptography.__version__)"
+
+      - name: Baixar artefatos das etapas anteriores
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: evidencias
+          merge-multiple: true
+
+      - name: Login no GHCR
+        env:
+          TOKEN: ${{ github.token }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Etapa - Verificação independente
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set +e  # roda todas as verificações e só falha no fim
+          cd evidencias
+          REF="${IMAGEM}@${DIGEST}"
+          ID_PIPELINE="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/.github/workflows/pipeline.yml@refs/heads/main"
+          ID_SLSA="https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@refs/tags/v2.1.0"
+          declare -A RES
+
+          registrar() { # nome status
+            if [ "$2" -eq 0 ]; then RES[$1]="OK"; else RES[$1]="FALHOU (código $2)"; fi
+            echo "$1: ${RES[$1]}"
+          }
+
+          echo "$REF" > e1-imagem.txt
+          echo "$DIGEST" > e1-digest.txt
+
+          main_atual=$(crane digest "${IMAGEM}:main")
+          st_main=1
+          [ "$main_atual" = "$DIGEST" ] && st_main=0
+          registrar "tag_main" "$st_main"
+
+          cosign verify --certificate-identity "$ID_PIPELINE" --certificate-oidc-issuer "$EMISSOR_OIDC" \
+            "$REF" > e1-cosign-verify.json 2> e1-cosign-verify.txt
+          registrar "cosign_verify" $?
+
+          for tipo in cyclonedx vuln; do
+            cosign verify-attestation --type "$tipo" \
+              --certificate-identity "$ID_PIPELINE" --certificate-oidc-issuer "$EMISSOR_OIDC" \
+              "$REF" > "e1-cosign-verify-attestation-${tipo}.json" 2> "e1-cosign-verify-attestation-${tipo}.txt"
+            registrar "cosign_verify_attestation_${tipo}" $?
+          done
+          cosign verify-attestation --type slsaprovenance \
+            --certificate-identity "$ID_SLSA" --certificate-oidc-issuer "$EMISSOR_OIDC" \
+            "$REF" > e1-cosign-verify-attestation-slsaprovenance.json 2> e1-cosign-verify-attestation-slsaprovenance.txt
+          registrar "cosign_verify_attestation_slsaprovenance" $?
+
+          # Verificador do grupo (E3), rodado da raiz do repositório (contrato da ESPEC).
+          # As variáveis VERIFICADOR_REGISTRY_* só têm efeito se o verificador aceitar credenciais
+          # (pedido em docs/pipeline.md); sem isso ele faz pull anônimo e exige o pacote público.
+          (cd "$GITHUB_WORKSPACE" && VERIFICADOR_REGISTRY_USUARIO="$GITHUB_ACTOR" VERIFICADOR_REGISTRY_SENHA="$TOKEN" \
+            "${RUNNER_TEMP}/venv/bin/python" -m verificador imagem "$REF" \
+            --identidade "$ID_PIPELINE" --emissor "$EMISSOR_OIDC" --json) \
+            > e1-verificador.json 2> e1-verificador.txt
+          registrar "verificador_do_grupo" $?
+
+          # logIndex global da assinatura no Rekor: o que o "cosign sign" desta execução imprimiu
+          # ("tlog entry created with index: N"); se faltar, o do bundle no cosign verify.
+          # Também guarda os índices de todas as assinaturas válidas do digest e dos atestados.
+          log_index=$(grep -oE 'tlog entry created with index: [0-9]+' e1-cosign-sign.txt 2>/dev/null | head -n1 | grep -oE '[0-9]+$')
+          if [ -z "$log_index" ]; then
+            log_index=$(jq -r '[.[].optional.Bundle.Payload.logIndex] | last // empty' e1-cosign-verify.json 2>/dev/null)
+          fi
+          indices_verify=$(jq -c '[.[].optional.Bundle.Payload | {logIndex, integratedTime}]' e1-cosign-verify.json 2>/dev/null || echo '[]')
+          idx_cdx=$(grep -oE 'tlog entry created with index: [0-9]+' e1-cosign-attest-cyclonedx.txt 2>/dev/null | head -n1 | grep -oE '[0-9]+$')
+          idx_vuln=$(grep -oE 'tlog entry created with index: [0-9]+' e1-cosign-attest-vuln.txt 2>/dev/null | head -n1 | grep -oE '[0-9]+$')
+          jq -n --arg imagem "$IMAGEM" --arg digest "$DIGEST" --arg li "${log_index:-}" \
+                --argjson verify "${indices_verify:-[]}" --arg cdx "${idx_cdx:-}" --arg vuln "${idx_vuln:-}" \
+            'def num: if . == "" then null else tonumber end;
+             {imagem: $imagem, digest: $digest,
+              logIndex: ($li | num),
+              url: (if $li == "" then null else "https://search.sigstore.dev/?logIndex=\($li)" end),
+              assinaturas_no_cosign_verify: $verify,
+              atestados: {cyclonedx: ($cdx | num), vuln: ($vuln | num)}}' > e1-rekor.json
+          cat e1-rekor.json
+
+          resultado_geral=0
+          {
+            echo "imagem,digest,verificacao,resultado"
+            for k in tag_main cosign_verify cosign_verify_attestation_cyclonedx cosign_verify_attestation_vuln \
+                     cosign_verify_attestation_slsaprovenance verificador_do_grupo; do
+              echo "${IMAGEM},${DIGEST},${k},${RES[$k]}"
+            done
+          } > e1-verificacoes.csv
+
+          {
+            echo "## E1 - pipeline completo"
+            echo
+            echo "- Imagem: \`${IMAGEM}\`"
+            echo "- Digest: \`${DIGEST}\`"
+            echo "- Tags: \`sha-${GITHUB_SHA::7}\` e \`main\`"
+            if [ -n "$log_index" ]; then
+              echo "- Rekor (assinatura): logIndex ${log_index} - https://search.sigstore.dev/?logIndex=${log_index}"
+            else
+              echo "- Rekor: logIndex não encontrado"
+            fi
+            echo "- Identidade esperada: \`${ID_PIPELINE}\`"
+            echo
+            echo "| Verificação | Resultado |"
+            echo "|---|---|"
+            for k in tag_main cosign_verify cosign_verify_attestation_cyclonedx cosign_verify_attestation_vuln \
+                     cosign_verify_attestation_slsaprovenance verificador_do_grupo; do
+              echo "| ${k} | ${RES[$k]} |"
+            done
+          } | tee e1-resumo.md >> "$GITHUB_STEP_SUMMARY"
+
+          for k in "${!RES[@]}"; do
+            [ "${RES[$k]}" = "OK" ] || resultado_geral=1
+          done
+          exit "$resultado_geral"
+
+      - name: Guardar evidências do E1
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: evidencias-e1
+          path: evidencias/
+          if-no-files-found: warn

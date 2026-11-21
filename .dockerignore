@@ -1,0 +1,5 @@
+# Só app/ entra no contexto de build: o resto do repositório não vai para a imagem.
+*
+!app/
+app/__pycache__/
+app/**/*.pyc

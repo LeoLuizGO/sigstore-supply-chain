@@ -1,0 +1,207 @@
+# E2 — Ataques à cadeia de suprimentos (imagens adulteradas para testar o cluster e o verificador).
+#
+# Produz as tags da tabela "Tags produzidas pelo workflow de ataques" da ESPEC:
+#   E2.1 sem-assinatura    :ataque-sem-assinatura    imagem modificada, sem assinatura
+#   E2.2 camada-alterada   :main (sobrescrita)        FROM <legítima>@<digest> + camada extra
+#   E2.3a outra-identidade :ataque-outra-identidade  assinada keyless por ESTE workflow (SAN ataques.yml)
+#   E2.3b chave-local      :ataque-chave-local       assinada com par de chaves gerado no job (sem Fulcio)
+#   E2.4 troca-assinatura  :ataque-troca-assinatura  .sig do digest legítimo copiado para sha256-<malicioso>.sig
+# E2.5 (rollback) e E2.6 (dependência vulnerável) não passam por aqui (ver docs/pipeline.md).
+#
+# Saídas: tabela tag -> digest no resumo da execução e o artifact "ataques-digests"
+# (ataques-digests.json, formato em docs/pipeline.md), consumido pelos scripts do cluster.
+#
+# Atenção: o cenário camada-alterada sobrescreve :main. Para voltar ao estado legítimo,
+# rode o pipeline.yml de novo (ou "crane tag <imagem>@<digest legítimo> main").
+name: ataques
+
+on:
+  workflow_dispatch:
+    inputs:
+      cenario:
+        description: "Cenário a executar"
+        type: choice
+        options:
+          - todos
+          - sem-assinatura
+          - camada-alterada
+          - outra-identidade
+          - chave-local
+          - troca-assinatura
+        default: todos
+      digest_legitimo:
+        description: "Digest legítimo (sha256:...) assinado pelo pipeline. Vazio = digest atual de :main"
+        type: string
+        default: ""
+      digest_antigo:
+        description: "Opcional (E2.5): digest legítimo ANTERIOR, assinado pelo pipeline; só é registrado no JSON"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ataques
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  COSIGN_VERSAO: v2.6.5
+  EMISSOR_OIDC: https://token.actions.githubusercontent.com
+  CENARIO: ${{ inputs.cenario }}
+
+jobs:
+  ataques:
+    # A identidade usada no E2.3a é ...ataques.yml@refs/heads/main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write # publicar as imagens adulteradas e as assinaturas falsas
+      id-token: write # E2.3a: assinatura keyless com a identidade deste workflow
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Instalar cosign (verificado pelo cosign-installer)
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        with:
+          cosign-release: ${{ env.COSIGN_VERSAO }}
+
+      - name: Instalar crane (versão fixa, hash e proveniência conferidos)
+        run: bash scripts/ci/instalar-ferramentas-ci.sh crane
+
+      - name: Login no GHCR
+        env:
+          TOKEN: ${{ github.token }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Resolver e conferir o digest legítimo
+        env:
+          DIGEST_ENTRADA: ${{ inputs.digest_legitimo }}
+          DIGEST_ANTIGO: ${{ inputs.digest_antigo }}
+        run: |
+          imagem="ghcr.io/${GITHUB_REPOSITORY,,}"
+          if [ -n "${DIGEST_ENTRADA:-}" ]; then
+            digest="$DIGEST_ENTRADA"
+          else
+            digest=$(crane digest "${imagem}:main")
+          fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::digest inválido: ${digest}"; exit 1; }
+          # O ponto de partida precisa ser a imagem legítima: se :main já foi sobrescrita por
+          # uma execução anterior (E2.2), esta verificação falha e é preciso informar digest_legitimo.
+          id_pipeline="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/.github/workflows/pipeline.yml@refs/heads/main"
+          if ! cosign verify --certificate-identity "$id_pipeline" --certificate-oidc-issuer "$EMISSOR_OIDC" \
+               "${imagem}@${digest}" > /dev/null 2> verificacao-legitimo.txt; then
+            cat verificacao-legitimo.txt
+            echo "::error::${imagem}@${digest} não tem assinatura do pipeline. Rode o pipeline.yml ou informe digest_legitimo."
+            exit 1
+          fi
+          # E2.5: o digest antigo (opcional) também precisa ser uma imagem legítima do pipeline.
+          if [ -n "${DIGEST_ANTIGO:-}" ]; then
+            [[ "$DIGEST_ANTIGO" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::digest_antigo inválido"; exit 1; }
+            if ! cosign verify --certificate-identity "$id_pipeline" --certificate-oidc-issuer "$EMISSOR_OIDC" \
+                 "${imagem}@${DIGEST_ANTIGO}" > /dev/null 2> verificacao-antigo.txt; then
+              cat verificacao-antigo.txt
+              echo "::error::digest_antigo ${DIGEST_ANTIGO} não tem assinatura do pipeline"
+              exit 1
+            fi
+          fi
+          {
+            echo "IMAGEM=${imagem}"
+            echo "DIGEST_LEGITIMO=${digest}"
+          } >> "$GITHUB_ENV"
+          jq -n --arg imagem "$imagem" --arg digest "$digest" \
+                --arg run "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+                --arg commit "$GITHUB_SHA" --arg cenario "$CENARIO" --arg antigo "${DIGEST_ANTIGO:-}" \
+                --arg agora "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                '{imagem: $imagem, digest_legitimo: $digest, referencia_legitima: "\($imagem)@\($digest)",
+                  digest_antigo: (if $antigo == "" then null else $antigo end),
+                  cenario_solicitado: $cenario, workflow_run: $run, commit: $commit, gerado_em: $agora,
+                  cenarios: []}' > ataques-digests.json
+          echo "Digest legítimo: ${imagem}@${digest}"
+
+      - name: "E2.1 - sem assinatura"
+        if: env.CENARIO == 'todos' || env.CENARIO == 'sem-assinatura'
+        run: |
+          d=$(bash scripts/ci/ataques.sh construir sem-assinatura ataque-sem-assinatura)
+          bash scripts/ci/ataques.sh registrar sem-assinatura E2.1 ataque-sem-assinatura "$d" \
+            "imagem modificada publicada sem assinatura"
+
+      - name: "E2.3a - assinada por outra identidade (keyless, ataques.yml)"
+        if: env.CENARIO == 'todos' || env.CENARIO == 'outra-identidade'
+        run: |
+          d=$(bash scripts/ci/ataques.sh construir outra-identidade ataque-outra-identidade)
+          cosign sign --yes "${IMAGEM}@${d}" 2>&1 | tee ataque-outra-identidade-sign.txt
+          idx=$(grep -oE 'tlog entry created with index: [0-9]+' ataque-outra-identidade-sign.txt | grep -oE '[0-9]+$' | head -n1 || true)
+          bash scripts/ci/ataques.sh registrar outra-identidade E2.3a ataque-outra-identidade "$d" \
+            "assinada keyless com SAN ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/.github/workflows/ataques.yml@${GITHUB_REF}; Rekor logIndex ${idx:-?}"
+
+      - name: "E2.3b - assinada com chave local (sem certificado Fulcio)"
+        if: env.CENARIO == 'todos' || env.CENARIO == 'chave-local'
+        run: |
+          # Senha vazia para a chave efêmera do atacante (o cosign lê COSIGN_PASSWORD se existir).
+          export COSIGN_PASSWORD=""
+          d=$(bash scripts/ci/ataques.sh construir chave-local ataque-chave-local)
+          chaves=$(mktemp -d)
+          (cd "$chaves" && cosign generate-key-pair)
+          cosign sign --yes --key "${chaves}/cosign.key" "${IMAGEM}@${d}" 2>&1 | tee ataque-chave-local-sign.txt
+          # A assinatura é criptograficamente válida para a chave do atacante...
+          cosign verify --key "${chaves}/cosign.pub" "${IMAGEM}@${d}" > /dev/null
+          cp "${chaves}/cosign.pub" ataque-chave-local.pub
+          rm -rf "$chaves" # a chave privada nunca sai do job
+          bash scripts/ci/ataques.sh registrar chave-local E2.3b ataque-chave-local "$d" \
+            "assinada com par de chaves cosign gerado no job; chave pública em ataque-chave-local.pub"
+
+      - name: "E2.4 - troca de assinatura (.sig do legítimo copiado)"
+        if: env.CENARIO == 'todos' || env.CENARIO == 'troca-assinatura'
+        run: |
+          d=$(bash scripts/ci/ataques.sh construir troca-assinatura ataque-troca-assinatura)
+          sig_legitima="${IMAGEM}:sha256-${DIGEST_LEGITIMO#sha256:}.sig"
+          sig_falsa="${IMAGEM}:sha256-${d#sha256:}.sig"
+          crane digest "$sig_legitima"
+          crane copy "$sig_legitima" "$sig_falsa"
+          echo "copiado ${sig_legitima} -> ${sig_falsa}"
+          bash scripts/ci/ataques.sh registrar troca-assinatura E2.4 ataque-troca-assinatura "$d" \
+            "manifesto sha256-<legítimo>.sig copiado para sha256-<malicioso>.sig"
+
+      # Por último, porque sobrescreve :main (os outros cenários partem do digest legítimo resolvido acima).
+      - name: "E2.2 - camada alterada publicada em :main"
+        if: env.CENARIO == 'todos' || env.CENARIO == 'camada-alterada'
+        run: |
+          d=$(bash scripts/ci/ataques.sh construir camada-alterada main)
+          bash scripts/ci/ataques.sh registrar camada-alterada E2.2 main "$d" \
+            "FROM imagem legítima + camada extra, publicada na tag main (sobrescrita)"
+          echo "::warning::${IMAGEM}:main agora aponta para a imagem adulterada ${d}. Rode o pipeline.yml para restaurar."
+
+      - name: Resumo
+        if: always()
+        run: |
+          [ -f ataques-digests.json ] || exit 0
+          {
+            echo "## E2 - imagens produzidas"
+            echo
+            echo "Digest legítimo de partida: \`$(jq -r .referencia_legitima ataques-digests.json)\`"
+            echo
+            echo "| Cenário | Tag | Digest |"
+            echo "|---|---|---|"
+            jq -r '.cenarios[] | "| \(.id) \(.cenario) | `:\(.tag)` | `\(.digest)` |"' ataques-digests.json
+          } >> "$GITHUB_STEP_SUMMARY"
+          jq . ataques-digests.json
+
+      - name: Guardar ataques-digests.json
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ataques-digests
+          path: |
+            ataques-digests.json
+            ataque-*.txt
+            ataque-chave-local.pub
+          if-no-files-found: ignore
