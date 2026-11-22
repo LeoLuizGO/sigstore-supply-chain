@@ -1,0 +1,45 @@
+Imagem:              ghcr.io/leoluizgo/sigstore-supply-chain@sha256:c6d23a7a95d125357938f58a13106e918208c83a746b0065963b3935e79261aa
+Identidade esperada: https://github.com/LeoLuizGO/sigstore-supply-chain/.github/workflows/pipeline.yml@refs/heads/main
+Emissor esperado:    https://token.actions.githubusercontent.com
+trusted_root:        sha256 6494e21ea73fa7ee…   ECDSA: ambos
+
+Assinatura 1/1 (camada sha256:b48ca3fce5db…): VÁLIDA
+  [ok   ] formato              simple signing + assinatura + certificado PEM
+  [ok   ] payload              docker-manifest-digest = sha256:c6d23a7a95d125357938f58a13106e918208c83a746b0065963b3935e79261aa
+  [ok   ] cadeia X.509         folha -> CN=sigstore-intermediate,O=sigstore.dev -> CN=sigstore,O=sigstore.dev (AC do trusted_root https://fulcio.sigstore.dev, validFor [2022-04-13 20:06:15+00:00, aberta])
+  [ok   ] EKU codeSigning      ExtendedKeyUsage contém codeSigning (1.3.6.1.5.5.7.3.3)
+  [ok   ] emissor OIDC         'https://token.actions.githubusercontent.com' (extensão 1.3.6.1.4.1.57264.1.8); esperado 'https://token.actions.githubusercontent.com'
+  [ok   ] identidade (SAN)     SAN = ['https://github.com/LeoLuizGO/sigstore-supply-chain/.github/workflows/pipeline.yml@refs/heads/main']; esperado 'https://github.com/LeoLuizGO/sigstore-supply-chain/.github/workflows/pipeline.yml@refs/heads/main'
+  [ok   ] ECDSA P-256          biblioteca=ok, manual=ok
+  [ok   ] entrada do Rekor     hashedrekord v0.0.1: hash do payload, assinatura e certificado conferem
+  [ok   ] checkpoint           assinado por rekor.sigstore.dev (hint c0d23d6a = logID[:4]); origem 'rekor.sigstore.dev - 1193050959916656506', tamanho 3926654701, raiz abc47a29169edfe3…
+  [ok   ] prova de inclusão    folha f1add67a2d096389…, índice 3926643256 de 3926654701, 24 hashes -> raiz abc47a29169edfe3…
+  [ok   ] SET (Rekor)          ECDSA do log sobre {body, integratedTime, logID, logIndex}
+  [ok   ] bundle da anotação   Payload igual ao do Rekor e SET da anotação válido (SET com bytes diferentes do atual: ECDSA é aleatorizado)
+  [ok   ] tempo                integratedTime 2026-11-22T22:16:39+00:00 em [2026-11-22T22:16:39+00:00, 2026-11-22T22:26:39+00:00]
+  certificado: serial 7202a495e2d23928…, válido [2026-11-22T22:16:39+00:00, 2026-11-22T22:26:39+00:00]
+    1.3.6.1.4.1.57264.1.1    Issuer (obsoleta)                        https://token.actions.githubusercontent.com
+    1.3.6.1.4.1.57264.1.2    GitHub Workflow Trigger (obsoleta)       workflow_dispatch
+    1.3.6.1.4.1.57264.1.3    GitHub Workflow SHA (obsoleta)           68f9bc9b513cbc6d08f2d62a881f85a4e959926b
+    1.3.6.1.4.1.57264.1.4    GitHub Workflow Name (obsoleta)          pipeline
+    1.3.6.1.4.1.57264.1.5    GitHub Workflow Repository (obsoleta)    LeoLuizGO/sigstore-supply-chain
+    1.3.6.1.4.1.57264.1.6    GitHub Workflow Ref (obsoleta)           refs/heads/main
+    1.3.6.1.4.1.57264.1.8    Issuer (V2)                              https://token.actions.githubusercontent.com
+    1.3.6.1.4.1.57264.1.9    Build Signer URI                         https://github.com/LeoLuizGO/sigstore-supply-chain/.github/workflows/pipeline.yml@refs/heads/main
+    1.3.6.1.4.1.57264.1.10   Build Signer Digest                      68f9bc9b513cbc6d08f2d62a881f85a4e959926b
+    1.3.6.1.4.1.57264.1.11   Runner Environment                       github-hosted
+    1.3.6.1.4.1.57264.1.12   Source Repository URI                    https://github.com/LeoLuizGO/sigstore-supply-chain
+    1.3.6.1.4.1.57264.1.13   Source Repository Digest                 68f9bc9b513cbc6d08f2d62a881f85a4e959926b
+    1.3.6.1.4.1.57264.1.14   Source Repository Ref                    refs/heads/main
+    1.3.6.1.4.1.57264.1.15   Source Repository Identifier             1468032709
+    1.3.6.1.4.1.57264.1.16   Source Repository Owner URI              https://github.com/LeoLuizGO
+    1.3.6.1.4.1.57264.1.17   Source Repository Owner Identifier       100092489
+    1.3.6.1.4.1.57264.1.18   Build Config URI                         https://github.com/LeoLuizGO/sigstore-supply-chain/.github/workflows/pipeline.yml@refs/heads/main
+    1.3.6.1.4.1.57264.1.19   Build Config Digest                      68f9bc9b513cbc6d08f2d62a881f85a4e959926b
+    1.3.6.1.4.1.57264.1.20   Build Trigger                            workflow_dispatch
+    1.3.6.1.4.1.57264.1.21   Run Invocation URI                       https://github.com/LeoLuizGO/sigstore-supply-chain/actions/runs/45076673694/attempts/1
+    1.3.6.1.4.1.57264.1.22   Source Repository Visibility At Signing  public
+    1.3.6.1.4.1.57264.1.24   desconhecida                             repo:LeoLuizGO@100092489/sigstore-supply-chain@1468032709:ref:refs/heads/main
+  rekor: logIndex 4048547518 (na árvore: 3926643256 de 3926654701), integrado em 2026-11-22T22:16:39+00:00, uuid 108e9186e8c5677af1add67a…
+
+RESULTADO: VÁLIDA (1 de 1 assinatura(s) válida(s))

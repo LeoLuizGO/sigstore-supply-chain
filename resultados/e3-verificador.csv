@@ -30,6 +30,22 @@ SET do Rekor invalido,sintetico,rejeitada,n/a,n/a,SET inválido
 SET da anotacao invalido,sintetico,rejeitada,n/a,n/a,SET inválido
 bundle da anotacao com integratedTime alterado,sintetico,rejeitada,n/a,n/a,bundle do registry não confere com o Rekor
 chave do log fora do trusted_root,sintetico,rejeitada,n/a,n/a,log de transparência desconhecido
+e3-evidencia-main: legitima,real,valida,valida,valida,
+e3-evidencia-main: identidade esperada errada,real,valida,valida,valida,
+e3-evidencia-main: emissor esperado errado,real,rejeitada,rejeitada,rejeitada,emissor errado
+e3-evidencia-main: digest esperado de outra imagem,real,rejeitada,n/a,n/a,assinatura é de outra imagem
+e3-evidencia-main: 1 byte alterado no payload,real,rejeitada,rejeitada,rejeitada,assinatura inválida
+e3-evidencia-main: 1 bit alterado na assinatura,real,rejeitada,rejeitada,rejeitada,assinatura inválida
+e3-evidencia-main: 1 hash da prova alterado,real,rejeitada,rejeitada,rejeitada,prova de inclusão inválida
+e3-evidencia-main: indice da prova errado,real,rejeitada,rejeitada,rejeitada,prova de inclusão inválida
+e3-evidencia-main: raiz falsa na prova e no checkpoint,real,rejeitada,rejeitada,rejeitada,checkpoint inválido
+e3-evidencia-main: assinatura do checkpoint alterada,real,rejeitada,rejeitada,rejeitada,checkpoint inválido
+e3-evidencia-main: SET alterado,real,rejeitada,rejeitada,rejeitada,SET inválido
+e3-evidencia-main: sem certificado (como chave local),real,rejeitada,n/a,n/a,"assinatura sem certificado Fulcio (chave própria, não keyless)"
+E2.1 sem assinatura,real,rejeitada,rejeitada,n/a,nenhuma assinatura encontrada
+E2.3a outra identidade,real,rejeitada,rejeitada,rejeitada,identidade errada
+E2.3b chave local,real,rejeitada,rejeitada,n/a,"assinatura sem certificado Fulcio (chave própria, não keyless)"
+E2.4 troca de assinatura,real,rejeitada,rejeitada,valida,assinatura é de outra imagem
 fluxcd-source-controller-v1.7.0: legitima,real,valida,valida,valida,
 fluxcd-source-controller-v1.7.0: identidade esperada errada,real,rejeitada,rejeitada,rejeitada,identidade errada
 fluxcd-source-controller-v1.7.0: emissor esperado errado,real,rejeitada,rejeitada,rejeitada,emissor errado

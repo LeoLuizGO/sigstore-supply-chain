@@ -1,0 +1,11 @@
+{
+  "formato": "verificador-ufsc/evidencia-v1",
+  "imagem": "ghcr.io/leoluizgo/sigstore-supply-chain",
+  "digest": "sha256:6c255c8efc8bbd016ef62805bb0eb17f7907a77c5235f22ae33459f5b5e2052b",
+  "baixado_em": "2026-11-22T22:22:11Z",
+  "rekor_url": "https://rekor.sigstore.dev",
+  "manifesto_sig": null,
+  "payloads": {},
+  "rekor": {},
+  "erros": []
+}

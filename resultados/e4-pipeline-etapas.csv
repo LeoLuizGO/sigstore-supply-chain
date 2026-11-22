@@ -1,0 +1,20 @@
+etapa,n,media_s,desvio_s,min_s,max_s
+workflow_total,5,198.6,35.4,175,261
+job: semgrep,5,23.2,2.9,18,25
+Semgrep (SAST),5,17.6,2.9,14,20
+job: build-e-varredura,5,43.6,4.6,39,49
+Build e push (tag sha-<7>),5,15.0,0.7,14,16
+Trivy bloqueante (CRITICAL com correção),5,7.0,1.4,5,9
+SBOM CycloneDX (Syft),5,3.4,0.5,3,4
+Relatório de vulnerabilidades cosign-vuln (Trivy),5,0.4,0.5,0,1
+job: assinar-e-atestar,5,25.2,5.3,18,32
+Assinatura keyless (cosign sign),5,4.4,0.5,4,5
+Atestado SBOM (cosign attest --type cyclonedx),5,4.0,1.0,3,5
+Atestado de varredura (cosign attest --type vuln),5,4.0,0.7,3,5
+job: proveniencia / detect-env,5,4.6,1.3,4,7
+job: proveniencia / generator,5,25.8,3.4,21,30
+job: proveniencia / final,5,3.2,0.8,2,4
+job: promover-main,5,12.6,2.1,9,14
+Mover :main para o digest assinado,5,1.6,0.5,1,2
+job: verificacao-independente,5,27.0,7.0,22,39
+Verificação independente,5,4.2,1.6,2,6

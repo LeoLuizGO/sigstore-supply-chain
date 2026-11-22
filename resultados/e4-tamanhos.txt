@@ -1,0 +1,12 @@
+ghcr.io/leoluizgo/sigstore-supply-chain@sha256:c6d23a7a95d125357938f58a13106e918208c83a746b0065963b3935e79261aa
+  manifesto da imagem: application/vnd.docker.distribution.manifest.v2+json, 2194 bytes
+  sha256-c6d23a7a95d125357938f58a13106e918208c83a746b0065963b3935e79261aa.sig  (manifesto 10218 B, total 10473 B)
+    [1] application/vnd.dev.cosign.simplesigning.v1+json 255 B assina sha256:c6d23a7a95d1…
+        anotações: assinatura=96 B, bundle=5334 B, certificado=2610 B, cadeia=1530 B
+  sha256-c6d23a7a95d125357938f58a13106e918208c83a746b0065963b3935e79261aa.att  (manifesto 30576 B, total 2574612 B)
+    [1] application/vnd.dsse.envelope.v1+json 1277324 B predicateType=https://cyclonedx.org/bom (statement 957849 B)
+        anotações: assinatura=0 B, bundle=5462 B, certificado=2610 B, cadeia=1530 B, predicateType=25 B
+    [2] application/vnd.dsse.envelope.v1+json 1255608 B predicateType=https://cosign.sigstore.dev/attestation/vuln/v1 (statement 941562 B)
+        anotações: assinatura=0 B, bundle=5462 B, certificado=2610 B, cadeia=1530 B, predicateType=47 B
+    [3] application/vnd.dsse.envelope.v1+json 11104 B predicateType=https://slsa.dev/provenance/v0.2 (statement 8182 B)
+        anotações: assinatura=0 B, bundle=5578 B, certificado=2675 B, cadeia=1530 B, predicateType=32 B

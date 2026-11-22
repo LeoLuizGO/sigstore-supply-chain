@@ -1,0 +1,96 @@
+run_id	etapa	segundos
+45078440662	workflow_total	189
+45078440662	job: semgrep	24
+45078440662	Semgrep (SAST)	15
+45078440662	job: build-e-varredura	48
+45078440662	Build e push (tag sha-<7>)	15
+45078440662	Trivy bloqueante (CRITICAL com correção)	9
+45078440662	SBOM CycloneDX (Syft)	4
+45078440662	Relatório de vulnerabilidades cosign-vuln (Trivy)	1
+45078440662	job: assinar-e-atestar	28
+45078440662	Assinatura keyless (cosign sign)	5
+45078440662	Atestado SBOM (cosign attest --type cyclonedx)	5
+45078440662	Atestado de varredura (cosign attest --type vuln)	4
+45078440662	job: proveniencia / detect-env	4
+45078440662	job: proveniencia / generator	27
+45078440662	job: proveniencia / final	2
+45078440662	job: promover-main	13
+45078440662	Mover :main para o digest assinado	2
+45078440662	job: verificacao-independente	22
+45078440662	Verificação independente	5
+45077481244	workflow_total	261
+45077481244	job: semgrep	24
+45077481244	Semgrep (SAST)	19
+45077481244	job: build-e-varredura	41
+45077481244	Build e push (tag sha-<7>)	15
+45077481244	Trivy bloqueante (CRITICAL com correção)	7
+45077481244	SBOM CycloneDX (Syft)	4
+45077481244	Relatório de vulnerabilidades cosign-vuln (Trivy)	0
+45077481244	job: assinar-e-atestar	25
+45077481244	Assinatura keyless (cosign sign)	5
+45077481244	Atestado SBOM (cosign attest --type cyclonedx)	4
+45077481244	Atestado de varredura (cosign attest --type vuln)	5
+45077481244	job: proveniencia / detect-env	4
+45077481244	job: proveniencia / generator	21
+45077481244	job: proveniencia / final	4
+45077481244	job: promover-main	14
+45077481244	Mover :main para o digest assinado	1
+45077481244	job: verificacao-independente	39
+45077481244	Verificação independente	6
+45077313295	workflow_total	175
+45077313295	job: semgrep	18
+45077313295	Semgrep (SAST)	14
+45077313295	job: build-e-varredura	49
+45077313295	Build e push (tag sha-<7>)	14
+45077313295	Trivy bloqueante (CRITICAL com correção)	7
+45077313295	SBOM CycloneDX (Syft)	3
+45077313295	Relatório de vulnerabilidades cosign-vuln (Trivy)	1
+45077313295	job: assinar-e-atestar	23
+45077313295	Assinatura keyless (cosign sign)	4
+45077313295	Atestado SBOM (cosign attest --type cyclonedx)	3
+45077313295	Atestado de varredura (cosign attest --type vuln)	3
+45077313295	job: proveniencia / detect-env	4
+45077313295	job: proveniencia / generator	24
+45077313295	job: proveniencia / final	3
+45077313295	job: promover-main	13
+45077313295	Mover :main para o digest assinado	2
+45077313295	job: verificacao-independente	22
+45077313295	Verificação independente	3
+45076673694	workflow_total	180
+45076673694	job: semgrep	25
+45076673694	Semgrep (SAST)	20
+45076673694	job: build-e-varredura	41
+45076673694	Build e push (tag sha-<7>)	15
+45076673694	Trivy bloqueante (CRITICAL com correção)	5
+45076673694	SBOM CycloneDX (Syft)	3
+45076673694	Relatório de vulnerabilidades cosign-vuln (Trivy)	0
+45076673694	job: assinar-e-atestar	18
+45076673694	Assinatura keyless (cosign sign)	4
+45076673694	Atestado SBOM (cosign attest --type cyclonedx)	3
+45076673694	Atestado de varredura (cosign attest --type vuln)	4
+45076673694	job: proveniencia / detect-env	7
+45076673694	job: proveniencia / generator	30
+45076673694	job: proveniencia / final	4
+45076673694	job: promover-main	9
+45076673694	Mover :main para o digest assinado	1
+45076673694	job: verificacao-independente	26
+45076673694	Verificação independente	2
+45075948379	workflow_total	188
+45075948379	job: semgrep	25
+45075948379	Semgrep (SAST)	20
+45075948379	job: build-e-varredura	39
+45075948379	Build e push (tag sha-<7>)	16
+45075948379	Trivy bloqueante (CRITICAL com correção)	7
+45075948379	SBOM CycloneDX (Syft)	3
+45075948379	Relatório de vulnerabilidades cosign-vuln (Trivy)	0
+45075948379	job: assinar-e-atestar	32
+45075948379	Assinatura keyless (cosign sign)	4
+45075948379	Atestado SBOM (cosign attest --type cyclonedx)	5
+45075948379	Atestado de varredura (cosign attest --type vuln)	4
+45075948379	job: proveniencia / detect-env	4
+45075948379	job: proveniencia / generator	27
+45075948379	job: proveniencia / final	3
+45075948379	job: promover-main	14
+45075948379	Mover :main para o digest assinado	2
+45075948379	job: verificacao-independente	26
+45075948379	Verificação independente	5

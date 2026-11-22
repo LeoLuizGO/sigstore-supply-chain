@@ -1,0 +1,13 @@
+
+Verification for ghcr.io/leoluizgo/sigstore-supply-chain@sha256:dc1e2591bcf6de5187d1e27ec4a943ef5774d4f66b0b2bdd56cad889e943eade --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The code-signing certificate was verified using trusted certificate authority certificates
+Certificate subject: https://github.com/LeoLuizGO/sigstore-supply-chain/.github/workflows/pipeline.yml@refs/heads/main
+Certificate issuer URL: https://token.actions.githubusercontent.com
+GitHub Workflow Trigger: push
+GitHub Workflow SHA: 68f9bc9b513cbc6d08f2d62a881f85a4e959926b
+GitHub Workflow Name: pipeline
+GitHub Workflow Repository: LeoLuizGO/sigstore-supply-chain
+GitHub Workflow Ref: refs/heads/main

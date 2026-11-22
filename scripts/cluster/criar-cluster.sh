@@ -65,6 +65,12 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
+# O Kyverno limita o contexto de avaliação a 2Mi por padrão. O SBOM (~0,9 MB) e o
+# relatório cosign-vuln (~1,3 MB) juntos passam disso e a política 03 recusaria a
+# imagem legítima com "context size limit exceeded". A ConfigMap é relida em tempo real.
+log "aumentando maxContextSize do Kyverno para 16Mi"
+k -n kyverno patch configmap kyverno --type merge -p '{"data":{"maxContextSize":"16Mi"}}' >/dev/null
+
 log "criando o namespace da aplicação"
 k apply -f "$RAIZ/k8s/namespace.yaml"
 

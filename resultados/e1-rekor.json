@@ -1,0 +1,16 @@
+{
+  "imagem": "ghcr.io/leoluizgo/sigstore-supply-chain",
+  "digest": "sha256:dc1e2591bcf6de5187d1e27ec4a943ef5774d4f66b0b2bdd56cad889e943eade",
+  "logIndex": 4048534373,
+  "url": "https://search.sigstore.dev/?logIndex=4048534373",
+  "assinaturas_no_cosign_verify": [
+    {
+      "logIndex": 4048534373,
+      "integratedTime": 1795385353
+    }
+  ],
+  "atestados": {
+    "cyclonedx": 4048534449,
+    "vuln": 4048534517
+  }
+}

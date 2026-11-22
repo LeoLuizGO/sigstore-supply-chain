@@ -1,0 +1,4 @@
+imagem,critical,high,medium,low,unknown,total
+python:3.12,16,524,1195,1420,256,3411
+python:3.12-slim,0,51,106,82,14,253
+gcr.io/distroless/python3-debian12,2,119,201,89,17,428

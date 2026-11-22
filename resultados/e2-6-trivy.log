@@ -1,0 +1,59 @@
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	﻿2026-11-22T22:19:27.0612084Z ##[group]Run status=0
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0612407Z ^[[36;1mstatus=0^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0612702Z ^[[36;1mtrivy image --image-src remote --scanners vuln \^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0613077Z ^[[36;1m  --severity CRITICAL --ignore-unfixed --exit-code 1 \^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0613471Z ^[[36;1m  --format json --output e1-trivy-bloqueante.json "$REF" || status=$?^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0613874Z ^[[36;1mif [ -s e1-trivy-bloqueante.json ]; then^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0614209Z ^[[36;1m  jq -r '.Results[]? | .Target as $t | .Vulnerabilities[]? |^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0614703Z ^[[36;1m         "\(.Severity)\t\(.VulnerabilityID)\t\(.PkgName) \(.InstalledVersion) -> \(.FixedVersion)\t\($t)"' \^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0615114Z ^[[36;1m    e1-trivy-bloqueante.json^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0615357Z ^[[36;1mfi^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0615576Z ^[[36;1mif [ "$status" -ne 0 ]; then^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0615950Z ^[[36;1m  n=$(jq '[.Results[]?.Vulnerabilities[]?] | length' e1-trivy-bloqueante.json 2>/dev/null || echo 0)^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0616451Z ^[[36;1m  {^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0616734Z ^[[36;1m    echo "## Pipeline interrompido pelo Trivy (antes da assinatura)"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0617092Z ^[[36;1m    echo^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0617484Z ^[[36;1m    echo "Imagem: \`${REF}\` (publicada só com a tag sha-<7>, **não assinada** e **não promovida** para :main)"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0617870Z ^[[36;1m    echo^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0618155Z ^[[36;1m    echo "CVEs CRITICAL com correção disponível: ${n}"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0618541Z ^[[36;1m    echo^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0618808Z ^[[36;1m    echo "| CVE | Pacote | Instalada | Corrigida em |"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0619285Z ^[[36;1m    echo "|---|---|---|---|"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0619858Z ^[[36;1m    jq -r '.Results[]?.Vulnerabilities[]? | "| \(.VulnerabilityID) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion) |"' \^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0620336Z ^[[36;1m      e1-trivy-bloqueante.json 2>/dev/null || true^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0620641Z ^[[36;1m  } >> "$GITHUB_STEP_SUMMARY"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0621048Z ^[[36;1m  echo "::error::Trivy encontrou CVE crítica com correção (ou falhou); a imagem não será assinada"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0621426Z ^[[36;1m  exit "$status"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0621631Z ^[[36;1mfi^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0621931Z ^[[36;1mecho "Trivy: nenhuma CVE CRITICAL com correção disponível"^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0646015Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0646387Z env:
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0646618Z   COSIGN_VERSAO: v2.6.5
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0646935Z   EMISSOR_OIDC: https://token.actions.githubusercontent.com
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0647502Z   SEMGREP_IMAGEM: semgrep/semgrep:1.186.0@sha256:6e1b04340e60e910fbb4ddbf3c857ab0918f064417ad5ac530014ccb3cf8c8f1
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0648162Z   REF: ghcr.io/leoluizgo/sigstore-supply-chain@sha256:ef4bace84fc9ee56a638d9c1bfd0c088e3f821ecfe91d5319e2c04d7254da791
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.0648605Z ##[endgroup]
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.1132036Z 2026-11-22T22:19:27Z	INFO	[vulndb] Need to update DB
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.1132757Z 2026-11-22T22:19:27Z	INFO	[vulndb] Downloading vulnerability DB...
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:27.1133372Z 2026-11-22T22:19:27Z	INFO	[vulndb] Downloading artifact...	repo="mirror.gcr.io/aquasec/trivy-db:2"
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:31.7594070Z 23.75 MiB / 136.18 MiB [---------->_________________________________________________] 17.44% ? p/s ?69.03 MiB / 136.18 MiB [------------------------------>_____________________________] 50.69% ? p/s ?118.56 MiB / 136.18 MiB [--------------------------------------------------->_______] 87.06% ? p/s ?136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 187.11 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 187.11 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 187.11 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 175.04 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 175.04 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 175.04 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 163.74 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 163.74 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 163.74 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 153.18 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 153.18 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 153.18 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 143.30 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [------------------------------------------->] 100.00% 143.30 MiB p/s ETA 0s136.18 MiB / 136.18 MiB [-----------------------------------------------] 100.00% 42.16 MiB p/s 3.4s2026-11-22T22:19:31Z	INFO	[vulndb] Artifact successfully downloaded	repo="mirror.gcr.io/aquasec/trivy-db:2"
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:31.7600562Z 2026-11-22T22:19:31Z	INFO	[vuln] Vulnerability scanning is enabled
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.0231326Z 2026-11-22T22:19:33Z	INFO	[python] Licenses acquired from one or more METADATA files may be subject to additional terms. Use `--debug` flag to see all affected packages.
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3265110Z 2026-11-22T22:19:33Z	INFO	Detected OS	family="debian" version="13.7"
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3265998Z 2026-11-22T22:19:33Z	INFO	[debian] Detecting vulnerabilities...	os_version="13" pkg_num=87
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3327732Z 2026-11-22T22:19:33Z	INFO	Number of language-specific files	num=1
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3328328Z 2026-11-22T22:19:33Z	INFO	[python-pkg] Detecting vulnerabilities...
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3405550Z 2026-11-22T22:19:33Z	WARN	Using severities from other vendors for some vulnerabilities. Read https://trivy.dev/docs/v0.69/guide/scanner/vulnerability#severity-selection for details.
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3467550Z 
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3468232Z 📣 ^[[34mNotices:^[[0m
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3468749Z   - Version 0.76.2 of Trivy is now available, current version is 0.69.3
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3469195Z 
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3469431Z To suppress version checks, run Trivy scans with the --skip-version-check flag
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3469751Z 
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3552686Z CRITICAL	CVE-2022-28346	Django 3.2.12 -> 2.2.28, 3.2.13, 4.0.4	Python
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3553229Z CRITICAL	CVE-2022-28347	Django 3.2.12 -> 2.2.28, 3.2.13, 4.0.4	Python
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3553704Z CRITICAL	CVE-2022-34265	Django 3.2.12 -> 3.2.14, 4.0.6	Python
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3554213Z CRITICAL	CVE-2023-31047	Django 3.2.12 -> 3.2.19, 4.1.9, 4.2.1	Python
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3554678Z CRITICAL	CVE-2025-64459	Django 3.2.12 -> 5.2.8, 5.1.14, 4.2.26	Python
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3668712Z ##[error]Trivy encontrou CVE crítica com correção (ou falhou); a imagem não será assinada
+build-e-varredura	Etapa - Trivy bloqueante (CRITICAL com correção)	2026-11-22T22:19:33.3671588Z ##[error]Process completed with exit code 1.

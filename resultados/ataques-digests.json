@@ -1,0 +1,57 @@
+{
+  "imagem": "ghcr.io/leoluizgo/sigstore-supply-chain",
+  "digest_legitimo": "sha256:c6d23a7a95d125357938f58a13106e918208c83a746b0065963b3935e79261aa",
+  "referencia_legitima": "ghcr.io/leoluizgo/sigstore-supply-chain@sha256:c6d23a7a95d125357938f58a13106e918208c83a746b0065963b3935e79261aa",
+  "digest_antigo": "sha256:dc1e2591bcf6de5187d1e27ec4a943ef5774d4f66b0b2bdd56cad889e943eade",
+  "cenario_solicitado": "todos",
+  "workflow_run": "https://github.com/LeoLuizGO/sigstore-supply-chain/actions/runs/45076985160",
+  "commit": "68f9bc9b513cbc6d08f2d62a881f85a4e959926b",
+  "gerado_em": "2026-11-22T22:18:48Z",
+  "cenarios": [
+    {
+      "cenario": "sem-assinatura",
+      "id": "E2.1",
+      "tag": "ataque-sem-assinatura",
+      "digest": "sha256:6c255c8efc8bbd016ef62805bb0eb17f7907a77c5235f22ae33459f5b5e2052b",
+      "referencia": "ghcr.io/leoluizgo/sigstore-supply-chain@sha256:6c255c8efc8bbd016ef62805bb0eb17f7907a77c5235f22ae33459f5b5e2052b",
+      "referencia_tag": "ghcr.io/leoluizgo/sigstore-supply-chain:ataque-sem-assinatura",
+      "observacao": "imagem modificada publicada sem assinatura"
+    },
+    {
+      "cenario": "outra-identidade",
+      "id": "E2.3a",
+      "tag": "ataque-outra-identidade",
+      "digest": "sha256:34f752eae91f3aa44220264100a58e82aac4b906f88ba9cf24bf4e0319e0a836",
+      "referencia": "ghcr.io/leoluizgo/sigstore-supply-chain@sha256:34f752eae91f3aa44220264100a58e82aac4b906f88ba9cf24bf4e0319e0a836",
+      "referencia_tag": "ghcr.io/leoluizgo/sigstore-supply-chain:ataque-outra-identidade",
+      "observacao": "assinada keyless com SAN https://github.com/LeoLuizGO/sigstore-supply-chain/.github/workflows/ataques.yml@refs/heads/main; Rekor logIndex 4048551789"
+    },
+    {
+      "cenario": "chave-local",
+      "id": "E2.3b",
+      "tag": "ataque-chave-local",
+      "digest": "sha256:aba5bf87838906e7896e8bb4aebc5c0a474d85f26b310568b962614b4b3fd727",
+      "referencia": "ghcr.io/leoluizgo/sigstore-supply-chain@sha256:aba5bf87838906e7896e8bb4aebc5c0a474d85f26b310568b962614b4b3fd727",
+      "referencia_tag": "ghcr.io/leoluizgo/sigstore-supply-chain:ataque-chave-local",
+      "observacao": "assinada com par de chaves cosign gerado no job; chave pública em ataque-chave-local.pub"
+    },
+    {
+      "cenario": "troca-assinatura",
+      "id": "E2.4",
+      "tag": "ataque-troca-assinatura",
+      "digest": "sha256:4af8eb2b2ef3abd4a64aae4f4969f28252fc2a37b9f8e876ee00186625e1286a",
+      "referencia": "ghcr.io/leoluizgo/sigstore-supply-chain@sha256:4af8eb2b2ef3abd4a64aae4f4969f28252fc2a37b9f8e876ee00186625e1286a",
+      "referencia_tag": "ghcr.io/leoluizgo/sigstore-supply-chain:ataque-troca-assinatura",
+      "observacao": "manifesto sha256-<legítimo>.sig copiado para sha256-<malicioso>.sig"
+    },
+    {
+      "cenario": "camada-alterada",
+      "id": "E2.2",
+      "tag": "main",
+      "digest": "sha256:2dd4bb75a9cd27f63620005e8c62a70799ef791de928b4e929d579d22114019b",
+      "referencia": "ghcr.io/leoluizgo/sigstore-supply-chain@sha256:2dd4bb75a9cd27f63620005e8c62a70799ef791de928b4e929d579d22114019b",
+      "referencia_tag": "ghcr.io/leoluizgo/sigstore-supply-chain:main",
+      "observacao": "FROM imagem legítima + camada extra, publicada na tag main (sobrescrita)"
+    }
+  ]
+}

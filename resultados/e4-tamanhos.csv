@@ -1,0 +1,29 @@
+artefato,bytes
+manifesto da imagem,2194
+sig: manifesto (com anotações),10218
+sig[1]: camada application/vnd.dev.cosign.simplesigning.v1+json,255
+sig[1]: anotação assinatura,96
+sig[1]: anotação bundle,5334
+sig[1]: anotação certificado,2610
+sig[1]: anotação cadeia,1530
+sig: total (manifesto + camadas),10473
+att: manifesto (com anotações),30576
+att[1]: camada https://cyclonedx.org/bom,1277324
+att[1]: anotação assinatura,0
+att[1]: anotação bundle,5462
+att[1]: anotação certificado,2610
+att[1]: anotação cadeia,1530
+att[1]: anotação predicateType,25
+att[2]: camada https://cosign.sigstore.dev/attestation/vuln/v1,1255608
+att[2]: anotação assinatura,0
+att[2]: anotação bundle,5462
+att[2]: anotação certificado,2610
+att[2]: anotação cadeia,1530
+att[2]: anotação predicateType,47
+att[3]: camada https://slsa.dev/provenance/v0.2,11104
+att[3]: anotação assinatura,0
+att[3]: anotação bundle,5578
+att[3]: anotação certificado,2675
+att[3]: anotação cadeia,1530
+att[3]: anotação predicateType,32
+att: total (manifesto + camadas),2574612
