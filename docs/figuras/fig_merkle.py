@@ -84,4 +84,4 @@ for k, (c, t) in enumerate(lg):
     ax.text(7, y, t, va="center", fontsize=7.6, color="#333")
 
 import os
-fig.savefig(os.path.join(os.path.dirname(__file__), "fig-merkle-2.8.png", bbox_inches="tight", pad_inches=0.08, facecolor="white")
+fig.savefig(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fig-merkle-2.8.png"), bbox_inches="tight", pad_inches=0.08, facecolor="white")

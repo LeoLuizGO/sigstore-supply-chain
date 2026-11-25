@@ -86,4 +86,4 @@ ax.text(49.5, 21.0, "monitores leem o log e alertam sobre assinaturas inesperada
         color="#666", style="italic")
 
 import os
-fig.savefig(os.path.join(os.path.dirname(__file__), "fig-rekor-2.6.png", bbox_inches="tight", pad_inches=0.08, facecolor="white")
+fig.savefig(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fig-rekor-2.6.png"), bbox_inches="tight", pad_inches=0.08, facecolor="white")
